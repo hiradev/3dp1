@@ -1,16 +1,32 @@
-// <div className="absolute top-28 left-0 right-0 z-10 flex items-center justify-center">
-//   POPUP
-// </div>;
-
 import { Canvas } from "@react-three/fiber";
-import { Suspense } from "react";
-import Loader from "../components/Loader";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { Loader, HomeInfo } from "../components";
 import Island from "../models/Island";
 import Sky from "../models/Sky";
 import Bird from "../models/Bird";
 import Plane from "../models/Plane";
+import sakura from "../assets/sakura.mp3";
+import { soundoff, soundon } from "../assets/icons";
 
 const Home = () => {
+  const audioRef = useRef(new Audio(sakura));
+  audioRef.current.volume = 0.4;
+  audioRef.current.loop = true;
+
+  const [isRotating, setIsRotating] = useState(false);
+  const [currentStage, setCurrentStage] = useState(1);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+
+  useEffect(() => {
+    if (isPlayingMusic) {
+      audioRef.current.play();
+    }
+
+    return () => {
+      audioRef.current.pause();
+    };
+  }, [isPlayingMusic]);
+
   const adjustIslandforHomeScreenSize = () => {
     let screenScale = null;
     let screenPositon = [0, -6.5, -43];
@@ -25,13 +41,34 @@ const Home = () => {
     return [screenScale, screenPositon, rotation];
   };
 
+  const adjustPlaneforHomeScreenSize = () => {
+    let screenScale, screenPositon;
+
+    if (window.innerWidth < 768) {
+      screenScale = [1.5, 1.5, 1.5];
+      screenPositon = [0, -1.5, 0];
+    } else {
+      screenScale = [3, 3, 3];
+      screenPositon = [0, -4, -4];
+    }
+
+    return [screenScale, screenPositon];
+  };
+
   const [islandScale, islandPosition, islandRotation] =
     adjustIslandforHomeScreenSize();
 
+  const [planeScale, planePosition] = adjustPlaneforHomeScreenSize();
+
   return (
     <section className="w-full h-screen relative">
+      <div className="absolute top-28 left-0 right-0 z-10 flex items-center justify-center">
+        {currentStage && <HomeInfo currentStage={currentStage} />}
+      </div>
       <Canvas
-        className="w-full h-screen bg-transparent"
+        className={`w-full h-screen bg-transparent ${
+          isRotating ? "cursor-grabbing" : "cursor-grab"
+        }`}
         camera={{ near: 0.1, far: 1000 }}
       >
         <Suspense fallback={<Loader />}>
@@ -44,15 +81,32 @@ const Home = () => {
           />
 
           <Bird />
-          <Sky />
+          <Sky isRotating={isRotating} />
           <Island
             position={islandPosition}
             scale={islandScale}
             rotation={islandRotation}
+            isRotating={isRotating}
+            setIsRotating={setIsRotating}
+            setCurrentStage={setCurrentStage}
           />
-          <Plane />
+          <Plane
+            isRotating={isRotating}
+            planeScale={planeScale}
+            planePosition={planePosition}
+            rotation={[0, 20, 0]}
+          />
         </Suspense>
       </Canvas>
+
+      <div className="absolute bottom-2 left-2">
+        <img
+          src={!isPlayingMusic ? soundoff : soundon}
+          alt="jukebox"
+          onClick={() => setIsPlayingMusic(!isPlayingMusic)}
+          className="w-10 h-10 cursor-pointer object-contain"
+        />
+      </div>
     </section>
   );
 };
